@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>FPS 3D WOW</title>
+<style>
+body { margin:0; overflow:hidden; }
+#info {
+  position:absolute;
+  top:10px;
+  left:10px;
+  color:white;
+  font-family:Arial;
+}
+</style>
+</head>
+<body>
+
+<div id="info">WASD = Muovi | Mouse = Guarda | Click = Spara</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+
+<script>
+let scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0a0a0a, 10, 100);
+
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 1, 1000);
+let renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// luce
+let light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(10, 20, 10);
+scene.add(light);
+
+// terreno
+let groundGeo = new THREE.PlaneGeometry(200,200);
+let groundMat = new THREE.MeshLambertMaterial({color:0x223322});
+let ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+
+// player
+camera.position.y = 2;
+
+// controlli base
+let keys = {};
+document.addEventListener("keydown", e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener("keyup", e=>keys[e.key.toLowerCase()]=false);
+
+// mouse look
+let mouse = {x:0,y:0};
+document.addEventListener("mousemove", e=>{
+  mouse.x = (e.clientX/window.innerWidth)*2-1;
+  mouse.y = (e.clientY/window.innerHeight)*2-1;
+  camera.rotation.y = -mouse.x;
+  camera.rotation.x = -mouse.y * 0.5;
+});
+
+// nemici
+let enemies = [];
+
+function spawnEnemy(){
+  let geo = new THREE.BoxGeometry(1,2,1);
+  let mat = new THREE.MeshLambertMaterial({color:0xff0000});
+  let enemy = new THREE.Mesh(geo, mat);
+  enemy.position.set((Math.random()-0.5)*50,1,(Math.random()-0.5)*50);
+  scene.add(enemy);
+  enemies.push(enemy);
+}
+setInterval(spawnEnemy, 2000);
+
+// sparo
+document.addEventListener("click", ()=>{
+  let raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+
+  let intersects = raycaster.intersectObjects(enemies);
+
+  if(intersects.length > 0){
+    let hit = intersects[0].object;
+    scene.remove(hit);
+    enemies.splice(enemies.indexOf(hit),1);
+  }
+});
+
+// loop
+function animate(){
+  requestAnimationFrame(animate);
+
+  // movimento
+  let speed = 0.2;
+  if(keys["w"]) camera.position.z -= speed;
+  if(keys["s"]) camera.position.z += speed;
+  if(keys["a"]) camera.position.x -= speed;
+  if(keys["d"]) camera.position.x += speed;
+
+  // nemici inseguono
+  enemies.forEach(e=>{
+    let dx = camera.position.x - e.position.x;
+    let dz = camera.position.z - e.position.z;
+    let dist = Math.sqrt(dx*dx+dz*dz);
+
+    e.position.x += dx/dist * 0.02;
+    e.position.z += dz/dist * 0.02;
+  });
+
+  renderer.render(scene, camera);
+}
+
+animate();
+</script>
+
+</body>
+</html>
